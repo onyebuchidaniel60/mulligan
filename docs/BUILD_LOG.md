@@ -366,10 +366,30 @@ The demo narration in `DEMO_VIDEO_PLAN.md` now uses these numbers (15 steps, fai
 
 ## Phase 5 — Validation + submission
 
-Status: IN PROGRESS
+Status: **COMPLETE** (except the video steps that need a credential)
 
+| Check | Result |
+|---|---|
+| `hermes plugins validate /root/mulligan` | **exit 0**, all checks ✓ |
+| `hermes plugins doctor /root/mulligan --ci` | **exit 0**, "6 tool(s), 2 hook(s)" |
+| `scripts/validate_plugin_catalog.py submission/plugin-catalog/mulligan.yaml` | **OK: 1 file(s) valid** |
+| Catalog pin | 40-char SHA `79f445eb6e038ce8336f35d286497fb862db32ab` |
+| PR | https://github.com/NousResearch/hermes-agent/pull/153805 (1 file added, +38) |
+
+`requires_hermes: ">=0.23.0"` is declared in both `plugin.yaml` (enforced by the loader) and
+the catalog entry (enforced at install/update), per admission rule 14.
 
 ## Phase 6 — Demo + submit
 
-Status: NOT STARTED
-Deadline: 5PM EST Nov 11
+Status: **BLOCKED on operator inputs** (not on code)
+
+Done in-repo: the ≤90s shot list (`DEMO_VIDEO_PLAN.md`), production notes
+(`demo/notes.md`), and the deterministic fixture that makes the inspect/rewind/diff beats
+reproducible.
+
+Outstanding, and why:
+- **Record the demo** — needs `OPENROUTER_API_KEY`; it is not set in this environment and
+  `~/.hermes` does not exist. The branch beat is a live model run.
+- **Post on X / submit the Typeform** — operator accounts; outside the authority granted
+  here.
+

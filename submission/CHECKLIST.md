@@ -26,7 +26,7 @@ Status as of the last commit. Update this file, not the memories of the people i
 - [x] `README.md` — determinism caveats + side-effect policy + disclosures
 - [x] `submission/plugin-catalog/mulligan.yaml` — 40-char SHA pin
 - [x] `submission/PR_BODY.md` — what it does, surfaces used, rule 13 disclosure
-- [x] PR opened against `NousResearch/hermes-agent` (see `submission/PR_URL.txt`)
+- [x] PR opened against `NousResearch/hermes-agent`: https://github.com/NousResearch/hermes-agent/pull/153805
 - [ ] ≤90s demo recorded on the pinned build (`demo/mulligan-90s.mp4`)
 - [ ] Demo posted on X tagging `@NousResearch`
 - [ ] Typeform submitted with the PR + video links
