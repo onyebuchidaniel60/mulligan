@@ -1,6 +1,10 @@
 ﻿name: mulligan
 version: "0.1.0"
 description: Record a Hermes run, rewind to any step, edit a decision, and replay forward to compare counterfactual outcomes.
+author: Mulligan contributors
+license: MIT
+requires_hermes: ">=0.23.0"
+tags: [replay, debugging, counterfactual, observability]
 provides_tools:
   - mg_list
   - mg_inspect
@@ -15,5 +19,3 @@ provides_middleware:
   - llm_execution
   - tool_execution
   - tool_request
-env:
-  - MULLIGAN_TRACE_DIR
