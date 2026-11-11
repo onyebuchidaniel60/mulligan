@@ -204,8 +204,25 @@ def annotate(records: list[dict]) -> list[dict]:
             item["status"] = note.get("status") or item.get("status")
             item["duration_ms"] = note.get("duration_ms")
             item["error_type"] = note.get("error_type")
+        elif step.get("type") == "tool_call":
+            # Fallback when no post_tool_call annotation survived (older trace, or a
+            # tool that never reached the hook because it was blocked).
+            item["status"] = _result_status(step.get("result"))
         view.append(item)
     return view
+
+
+def _result_status(result: Any) -> str:
+    payload = result
+    if isinstance(payload, str):
+        try:
+            payload = json.loads(payload)
+        except (TypeError, ValueError):
+            return "ok"
+    if isinstance(payload, dict):
+        if payload.get("ok") is False or payload.get("error"):
+            return "error"
+    return "ok"
 
 
 def list_runs() -> list[dict]:
@@ -319,6 +336,7 @@ class ReplayState:
     serving_run: str | None = None
     steps: list[dict] = field(default_factory=list)
     cursor: int = 0
+    served_seqs: set[int] = field(default_factory=set)
     branch_at: int | None = None
     edit: dict | None = None
     parent_session_id: str | None = None
@@ -458,7 +476,12 @@ class ReplayState:
             return step
 
     def take_tool(self, tool_name: str, tool_call_id: str) -> dict | None:
-        """Return the recorded tool step to serve, or None to execute live."""
+        """Return the recorded tool step to serve, or None to execute live.
+
+        Matching is by ``tool_call_id`` first, so parallel tool calls may arrive in any
+        order (they run on a thread pool). The cursor advances only past steps that
+        have actually been served.
+        """
         with self.lock:
             if self.mode != SERVING:
                 return None
@@ -473,16 +496,25 @@ class ReplayState:
                     self._desync(tool_name, str(self.steps[self.cursor].get("tool_name")), self.steps[self.cursor])
                 return None
             step = self.steps[index]
-            self.cursor = index + 1
+            self.served_seqs.add(index)
+            self._advance()
             self.served_tool += 1
             return step
 
+    def _advance(self) -> None:
+        while self.cursor < len(self.steps) and self.cursor in self.served_seqs:
+            self.cursor += 1
+
     def _find_tool_step(self, tool_name: str, tool_call_id: str) -> int | None:
+        while self.cursor < len(self.steps) and self.cursor in self.served_seqs:
+            self.cursor += 1
         if self.cursor >= len(self.steps):
             return None
         if tool_call_id:
             for index in range(self.cursor, len(self.steps)):
                 step = self.steps[index]
+                if index in self.served_seqs:
+                    continue
                 if step.get("type") == "tool_call" and step.get("tool_call_id") == tool_call_id:
                     return index
         step = self.steps[self.cursor]

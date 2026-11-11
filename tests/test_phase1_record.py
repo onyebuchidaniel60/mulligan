@@ -33,7 +33,8 @@ class TestRecordOnly(unittest.TestCase):
             records = h.state.read_trace(run["run_id"])
             self.assertEqual(records[0]["type"], "header")
             self.assertEqual(records[0]["v"], 1)
-            self.assertEqual([r["type"] for r in records if r["type"] != "header"], ["llm_call", "tool_call", "llm_call"])
+            self.assertEqual([r["type"] for r in records if r["type"] in ("llm_call", "tool_call")],
+                             ["llm_call", "tool_call", "llm_call"])
             steps = h.state.load_steps(records)
             self.assertEqual([s["seq"] for s in steps], [0, 1, 2])
             self.assertEqual(steps[1]["tool_name"], "read_file")
@@ -44,7 +45,9 @@ class TestRecordOnly(unittest.TestCase):
             # Append-only: every line is valid JSON and nothing was rewritten.
             path = h.state.run_path(run["run_id"])
             lines = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-            self.assertEqual(len(lines), 4)
+            self.assertTrue(all(isinstance(line, dict) for line in lines))
+            self.assertEqual(sum(1 for line in lines if line["type"] == "tool_status"), 1,
+                             "post_tool_call appends a status annotation, never a rewrite")
 
     def test_mulligan_own_tools_are_not_recorded(self):
         with HermesRun() as h:

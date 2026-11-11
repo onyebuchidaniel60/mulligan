@@ -359,21 +359,27 @@ def mg_diff(args: dict, ctx: Any = None, **kwargs: Any) -> str:
     a_header = state.load_header(a_records)
     b_header = state.load_header(b_records)
 
-    divergence = _first_divergence(a_steps, b_steps)
-    a_fail = _first_failure(a_steps)
-    b_fail = _first_failure(b_steps)
+    # A branch only records the steps it ran live; the deterministic prefix it served
+    # belongs to the parent run, so compare against that prefix rather than calling it
+    # a divergence.
+    a_view = _with_branch_prefix(a_steps, a_header, run_b, b_steps)
+    b_view = _with_branch_prefix(b_steps, b_header, run_a, a_steps)
+
+    divergence = _first_divergence(a_view, b_view)
+    a_fail = _first_failure(a_view)
+    b_fail = _first_failure(b_view)
     b_desync = next((r for r in b_records if r.get("type") == "desync"), None)
     served = int(b_header.get("branch_at") or 0)
 
     lines = [
-        f"A {run_a:<24} {len(a_steps):>3} steps · {'FAILED at ' + str(a_fail) if a_fail is not None else 'no failing step'}",
-        f"B {run_b:<24} {len(b_steps):>3} steps · {'FAILED at ' + str(b_fail) if b_fail is not None else 'no failing step'}",
+        f"A {run_a:<24} {len(a_view):>3} steps · {'FAILED at ' + str(a_fail) if a_fail is not None else 'no failing step'}",
+        f"B {run_b:<24} {len(b_view):>3} steps · {'FAILED at ' + str(b_fail) if b_fail is not None else 'no failing step'}",
         "",
     ]
     if b_header.get("branch_of"):
         lines.append(
             f"B is a branch of {b_header['branch_of']} at step {served}: "
-            f"steps 0..{served - 1} served deterministically, {max(len(b_steps) - served, 0)} executed live."
+            f"steps 0..{served - 1} served deterministically, {len(b_steps)} executed live."
         )
     if divergence is None:
         lines.append("first divergence: none — the runs agree on every compared step")
@@ -387,25 +393,36 @@ def mg_diff(args: dict, ctx: Any = None, **kwargs: Any) -> str:
     width = 68
     lines.append("")
     lines.append(f"{'#':>3}  {'A':<{width}}  B")
-    for index in range(min(len(a_steps), len(b_steps))):
-        left = _step_label(a_steps[index])
-        right = _step_label(b_steps[index])
+    for index in range(min(len(a_view), len(b_view))):
+        left = _step_label(a_view[index])
+        right = _step_label(b_view[index])
         mark = " " if left == right else "≠"
-        lines.append(f"{a_steps[index].get('seq', index):>3} {mark}{left[:width]:<{width}}  {right[:width]}")
+        lines.append(f"{a_view[index].get('seq', index):>3} {mark}{left[:width]:<{width}}  {right[:width]}")
 
     return _ok(
         "\n".join(lines),
         run_a=run_a,
         run_b=run_b,
-        steps_a=len(a_steps),
-        steps_b=len(b_steps),
+        steps_a=len(a_view),
+        steps_b=len(b_view),
         first_divergence=divergence,
         first_failure_a=a_fail,
         first_failure_b=b_fail,
         served_steps=served,
-        live_steps=max(len(b_steps) - served, 0),
+        live_steps=len(b_steps),
         desync=b_desync,
     )
+
+
+def _with_branch_prefix(steps: list[dict], header: dict, other_run: str, other_steps: list[dict]) -> list[dict]:
+    """Prepend the parent's served prefix when ``steps`` is a branch of ``other_run``."""
+    if header.get("branch_of") != other_run:
+        return steps
+    try:
+        cut = int(header.get("branch_at"))
+    except (TypeError, ValueError):
+        return steps
+    return other_steps[:cut] + steps
 
 
 def _first_failure(steps: list[dict]) -> int | None:

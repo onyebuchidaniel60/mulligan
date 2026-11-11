@@ -241,20 +241,92 @@ Phase 0 gate: **PASSED**. Proceeding to Phase 1.
 
 ## Phase 1 — Scaffold + record-only
 
-Status: NOT STARTED
+Status: **COMPLETE** (commit `06af2f0`, extended by the Phase 2/3 commits)
+
+Delivered:
+- `plugin.yaml`, `__init__.py`, `mg_schemas.py`, `mg_tools.py`, `mg_middleware.py`,
+  `mg_hooks.py`, `mg_state.py` — stdlib only, no third-party imports.
+- All six tools, both hooks and all three middleware kinds registered through public
+  `ctx` APIs only.
+- Append-only JSONL v1 under `$HERMES_HOME/replay-traces/`: a header line, then
+  `llm_call` / `tool_call` records, plus `tool_status` annotations from `post_tool_call`.
+  Nothing is ever rewritten; `mg_inspect` folds annotations at read time.
+
+Evidence (`python3 -m unittest discover -s tests -v`, 4 tests):
+
+```
+test_mulligan_own_tools_are_not_recorded ... ok
+test_three_step_run_writes_well_formed_trace ... ok
+test_trace_dir_is_inside_hermes_home ... ok
+test_trace_dir_outside_home_is_refused ... ok
+Ran 4 tests in 4.4s  OK
+```
+
+```
+$ hermes plugins validate /root/mulligan
+✓ manifest, loadable, capability probe, declared tools/hooks/middleware,
+  built-in tool collisions, security scan, no core override
+Validation passed.   (exit 0)
+```
+
+Tests drive the **real** `hermes_cli.middleware` dispatch chain through a live
+`PluginManager` (`tests/harness.py`), not a re-implementation of it.
+
+Design fix found while building: the module was first called `tools.py`, which shadowed
+Hermes's top-level `tools` package for any process whose cwd is the plugin checkout
+(`from tools.registry import registry` resolved to the plugin). Every module is now
+`mg_`-prefixed.
 
 ## Phase 2 — Serve / exact reproduction (GO/NO-GO)
 
-Status: NOT STARTED
-Acceptance: exact-reproduction test passes with zero provider calls, zero side effects
+Status: **PASSED**
+
+Acceptance, measured on a recorded 2-llm + 1-tool run replayed into a fresh session:
+
+| Invariant | Result |
+|---|---|
+| identical step sequence | 2 llm + 1 tool served, cursor ends at 3 |
+| provider calls on served steps | **0** (provider double never invoked) |
+| tool invocations on served steps | **0** (tool double never invoked) |
+| recorded trace mutated | **0 bytes changed** |
+| extra trace files created | **none** (nothing ran live) |
+| returned LLM response | the exact recorded object (`is` identity) |
+
+Also verified: a session without the replay nonce is **not** served and does not steal the
+armed replay; parallel tool calls are matched by `tool_call_id` so out-of-order arrival
+still serves the right result; a desync fails open to live execution, is appended to the
+trace as a `desync` record, and is surfaced by `mg_diff`.
+
+Evidence (`tests/test_phase2_replay.py`, 8 tests, all pass):
+
+```
+test_no_edit_replay_reproduces_every_step_with_zero_calls ... ok
+test_replay_is_side_effect_free_on_disk ... ok
+test_unbound_child_runs_live_and_does_not_steal_the_record ... ok
+test_tool_steps_are_matched_by_tool_call_id_when_out_of_order ... ok
+test_desync_fails_open_to_live_and_is_recorded ... ok
+test_mg_play_launches_a_child_with_the_nonce_and_reports_serving ... ok
+test_mg_edit_rejects_non_tool_steps_and_second_edits ... ok
+test_mg_play_without_rewind_is_not_armed ... ok
+```
 
 ## Phase 3 — Edit + branch
 
-Status: NOT STARTED
+Status: **COMPLETE**
+
+The edit is applied in `tool_request` (before approvals), so the guardrails and the human
+approve the *edited* arguments — see Phase 0 (c). At the branch point the child stops
+serving, executes the edited call live, and writes a new run whose header records
+`branch_of` / `branch_at`. Steps the branch served are not duplicated into it.
+
+Evidence (`tests/test_phase3_branch.py`, 2 tests, pass): rewind to the failing step, edit
+`config/dev.yaml` → `config/prod.yaml`, play → exactly one live tool call with the edited
+arguments, branch run created at `seq 1`, original trace unchanged, `mg_diff` reports
+first divergence at step 1 with reason `different tool arguments`, A fails at 1, B does not.
 
 ## Phase 4 — Inspect + diff
 
-Status: NOT STARTED
+Status: IN PROGRESS
 
 ## Phase 5 — Validation + submission
 

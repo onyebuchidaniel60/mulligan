@@ -119,16 +119,44 @@ class HermesRun:
         tool_call_id: str,
         counter: list | None = None,
     ) -> Any:
-        """One tool execution through the real execution chain."""
+        """One tool execution through the real request + execution chain.
+
+        Mirrors ``agent/tool_executor.py``: ``tool_request`` runs first and its payload is
+        what execution middleware (and the base dispatcher) see.
+        """
+        from hermes_cli.middleware import apply_tool_request_middleware
+
+        applied = apply_tool_request_middleware(
+            tool_name,
+            args,
+            session_id=session_id,
+            task_id=session_id,
+            tool_call_id=tool_call_id,
+            turn_id="turn-1",
+            api_request_id="api-1",
+        )
+        effective = applied.payload if isinstance(applied.payload, dict) else args
 
         def next_call(payload):
             if counter is not None:
                 counter.append((tool_name, payload))
             return result
 
-        return self.run_tool(
+        from hermes_cli.plugins import invoke_hook
+
+        invoke_hook(
+            "pre_tool_call",
+            tool_name=tool_name,
+            args=effective,
+            task_id=session_id,
+            session_id=session_id,
+            tool_call_id=tool_call_id,
+            turn_id="turn-1",
+            api_request_id="api-1",
+        )
+        value = self.run_tool(
             tool_name,
-            args,
+            effective,
             next_call,
             original_args=args,
             session_id=session_id,
@@ -136,7 +164,29 @@ class HermesRun:
             tool_call_id=tool_call_id,
             turn_id="turn-1",
             api_request_id="api-1",
+            middleware_trace=list(applied.trace),
         )
+        status = "ok"
+        try:
+            parsed = json.loads(value) if isinstance(value, str) else value
+            if isinstance(parsed, dict) and (parsed.get("ok") is False or parsed.get("error")):
+                status = "error"
+        except (TypeError, ValueError):
+            pass
+        invoke_hook(
+            "post_tool_call",
+            tool_name=tool_name,
+            args=effective,
+            result=value,
+            task_id=session_id,
+            session_id=session_id,
+            tool_call_id=tool_call_id,
+            turn_id="turn-1",
+            api_request_id="api-1",
+            status=status,
+            duration_ms=1,
+        )
+        return value
 
     # -- tools --------------------------------------------------------------
 
