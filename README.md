@@ -76,6 +76,10 @@ launch context. The child serves the recorded prefix, then continues live.
 - Hermes Agent **>= 0.23.0** (`ctx.subagent_lifecycle`). Hermes 0.19.0 and older do not
   have it; the plugin declares the floor in `plugin.yaml` and refuses to load earlier.
 - Python standard library only. No dependencies, no network calls, no binaries.
+- `plugins.isolation: in_process` (the default). Mulligan keeps its replay registry in
+  module state so a child session can see what the parent armed; under
+  `plugins.isolation: host` the plugin runs in a separate process and replay state would
+  not be shared.
 
 ## Install
 

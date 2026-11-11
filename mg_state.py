@@ -374,6 +374,10 @@ class ReplayState:
             self.writer = None
 
     def record_llm(self, request: Any, response: Any, context: dict) -> None:
+        with self.lock:
+            self._record_llm(request, response, context)
+
+    def _record_llm(self, request: Any, response: Any, context: dict) -> None:
         if self.error:
             return
         self._start_recording()
@@ -402,6 +406,10 @@ class ReplayState:
         self.seq += 1
 
     def record_tool(self, tool_name: str, args: Any, result: Any, context: dict) -> None:
+        with self.lock:
+            self._record_tool(tool_name, args, result, context)
+
+    def _record_tool(self, tool_name: str, args: Any, result: Any, context: dict) -> None:
         if self.error:
             return
         self._start_recording()
@@ -431,6 +439,10 @@ class ReplayState:
         self.seq += 1
 
     def annotate_tool(self, tool_call_id: str, status: str, duration_ms: Any, **extra: Any) -> None:
+        with self.lock:
+            self._annotate_tool(tool_call_id, status, duration_ms, **extra)
+
+    def _annotate_tool(self, tool_call_id: str, status: str, duration_ms: Any, **extra: Any) -> None:
         seq = self.recorded_tools.pop(str(tool_call_id or ""), None)
         if seq is None or self.writer is None:
             return

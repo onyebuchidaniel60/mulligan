@@ -35,6 +35,11 @@
   synthetic response and appends a `synthetic` record rather than making a hidden provider
   call. `mg_diff` will show the extra step.
 
+## mg_play cannot see the armed replay under host isolation
+- Mulligan relies on in-process module state (`plugins.isolation: in_process`, the default).
+  With `plugins.isolation: host` the plugin runs in a separate process, so the child never
+  sees the armed replay and runs live. Set `plugins.isolation: in_process` for this plugin.
+
 ## provides_middleware warning
 - Hermes treats `provides_middleware` as an unknown manifest field at v1 (debug-level) but
   `hermes plugins validate` uses it to diff declared vs registered middleware. Keep it: it

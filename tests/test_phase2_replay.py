@@ -183,6 +183,34 @@ class TestExactReproduction(unittest.TestCase):
             self.assertEqual(len(branch_runs), 1, "the live remainder is recorded as a branch")
 
 
+class TestConcurrency(unittest.TestCase):
+    def test_parallel_tool_calls_get_distinct_sequence_numbers(self):
+        """Parallel tool calls run on a thread pool; recording must not collide on seq."""
+        with HermesRun() as h:
+            import threading
+
+            session = "sess-concurrent"
+            h.llm(session, {"messages": [{"role": "user", "content": "read four files"}]},
+                  response(tool_calls=[{"id": f"call_{i}", "name": "read_file", "arguments": {"path": str(i)}}
+                                       for i in range(4)]), [])
+            threads = []
+            for index in range(4):
+                thread = threading.Thread(
+                    target=h.tool,
+                    args=(session, "read_file", {"path": str(index)},
+                          tool_result(True, content=str(index)), f"call_{index}", []),
+                )
+                threads.append(thread)
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+
+            steps = h.state.load_steps(h.state.read_trace(h.state.list_runs()[0]["run_id"]))
+            self.assertEqual([s["seq"] for s in steps], [0, 1, 2, 3, 4])
+            self.assertEqual(len({s["tool_call_id"] for s in steps[1:]}), 4)
+
+
 class _FakeService:
     """Stands in for ctx.subagent_lifecycle; runs the child script inline."""
 
