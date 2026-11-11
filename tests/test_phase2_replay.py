@@ -93,6 +93,28 @@ class TestExactReproduction(unittest.TestCase):
             # Exact reproduction adds no branch trace: nothing ran live.
             self.assertEqual([r["run_id"] for r in h.state.list_runs()], [run_id])
 
+    def test_replay_from_disk_snapshot_when_the_live_object_is_gone(self):
+        """The demo replays in a new process: the recorded JSON must rebuild a usable response."""
+        with HermesRun() as h:
+            run = record_three_step_run(h)
+            run_id = run["run_id"]
+            # Drop every in-memory provider object, as a process restart would.
+            h.state._OBJECTS.clear()
+            h.state._OBJECTS_ORDER.clear()
+
+            h.call("mg_rewind", {"run_id": run_id})
+            nonce = h.state.pending().nonce
+            provider: list = []
+            served = h.llm("sess-child-disk", {"messages": [{"role": "user", "content": nonce}]},
+                           response("LIVE"), provider)
+            self.assertEqual(provider, [])
+            message = served.choices[0].message
+            self.assertEqual(message.role, "assistant")
+            self.assertEqual(len(message.tool_calls), 1)
+            self.assertEqual(message.tool_calls[0].function.name, "read_file")
+            self.assertEqual(json.loads(message.tool_calls[0].function.arguments), {"path": "config/dev.yaml"})
+            self.assertEqual(served.usage.total_tokens, 15)
+
     def test_replay_is_side_effect_free_on_disk(self):
         with HermesRun() as h:
             run = record_three_step_run(h)

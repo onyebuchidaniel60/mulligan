@@ -326,11 +326,48 @@ first divergence at step 1 with reason `different tool arguments`, A fails at 1,
 
 ## Phase 4 — Inspect + diff
 
-Status: IN PROGRESS
+Status: **COMPLETE**
+
+`demo/build_demo_trace.py` writes a deterministic fixture run in the plugin's real JSONL v1
+format (no model, no side effects): 15 steps, failing at step 13 on
+`read_file(config/staging.yaml)`. It can also write the branch shape `mg_play` produces, so
+`mg_diff` can be checked without a provider credential.
+
+`mg_inspect` on the fixture:
+
+```
+run r_demo_deploy · 15 steps · Deploy the service to staging and report the result.
+seq  kind  step                                                    status
+  0  llm_  decides list_files                                      ok
+ ...
+ 11  tool  read_file({"path": "config/prod.yaml"})                ok
+ 12  llm_  decides read_file                                      ok
+ 13  tool  read_file({"path": "config/staging.yaml"})             error
+ 14  llm_  reply I could not read config/staging.yaml…            ok
+first failing step: 13 — mg_rewind --to 13 then mg_edit and mg_play
+```
+
+`mg_diff r_demo_deploy r_demo_branch`:
+
+```
+A r_demo_deploy             15 steps · FAILED at 13
+B r_demo_branch             15 steps · no failing step
+
+B is a branch of r_demo_deploy at step 13: steps 0..12 served deterministically, 2 executed live.
+first divergence: step 13 (different tool arguments)
+  A: read_file({"path": "config/staging.yaml"})
+  B: read_file({"path": "config/prod.yaml"})
+...
+ 13 ≠read_file({"path": "config/staging.yaml"})   read_file({"path": "config/prod.yaml"})
+```
+
+The demo narration in `DEMO_VIDEO_PLAN.md` now uses these numbers (15 steps, failure at 13,
+13 served + 2 live), not the pre-implementation guesses.
 
 ## Phase 5 — Validation + submission
 
-Status: NOT STARTED
+Status: IN PROGRESS
+
 
 ## Phase 6 — Demo + submit
 

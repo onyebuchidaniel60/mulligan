@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+demo/*.mp4
+demo/*.mov
+.DS_Store
