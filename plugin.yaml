@@ -1,0 +1,19 @@
+﻿name: mulligan
+version: "0.1.0"
+description: Record a Hermes run, rewind to any step, edit a decision, and replay forward to compare counterfactual outcomes.
+provides_tools:
+  - mg_list
+  - mg_inspect
+  - mg_rewind
+  - mg_edit
+  - mg_play
+  - mg_diff
+provides_hooks:
+  - pre_tool_call
+  - post_tool_call
+provides_middleware:
+  - llm_execution
+  - tool_execution
+  - tool_request
+env:
+  - MULLIGAN_TRACE_DIR
