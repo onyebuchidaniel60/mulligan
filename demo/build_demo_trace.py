@@ -10,8 +10,8 @@ Usage:
     HERMES_HOME=/tmp/mulligan-demo python3 demo/build_demo_trace.py
     # -> $HERMES_HOME/replay-traces/r_demo_deploy.jsonl
 
-The run: "deploy the service to staging" — the agent reads the deployment files and then
-fails at step 12 on a bad config path (config/staging.yaml). mg_edit fixes it to
+The run: "deploy using config/prod.yaml" — the agent reads the deployment files and then
+fails at step 13 on a typo'd config path (config/prod.yml). mg_edit fixes it to
 config/prod.yaml.
 """
 
@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT))
 from mg_state import TraceWriter, digest  # noqa: E402  (plugin module, stdlib only)
 
 RUN_ID = "r_demo_deploy"
-GOAL = "Deploy the service to staging and report the result."
+GOAL = "Deploy the service using the production config at config/prod.yaml and report the result."
 
 
 def _response(index: int, *, content: str | None = None, calls: list | None = None) -> dict:
@@ -74,18 +74,18 @@ def _assistant(response: dict) -> dict:
 
 
 PLAN = [
-    ("llm", "Read the repository layout before touching deployment files.",
-     [("call_00", "list_files", {"path": "."})]),
-    ("tool", "list_files", {"path": "."},
-     {"ok": True, "entries": ["README.md", "deploy.sh", "config/", "src/"]}, "ok"),
+    ("llm", "Find the deployment files before touching anything.",
+     [("call_00", "search_files", {"pattern": "*", "target": "files", "path": "."})]),
+    ("tool", "search_files", {"pattern": "*", "target": "files", "path": "."},
+     {"ok": True, "total_count": 4, "files": ["README.md", "deploy.sh", "config/base.yaml", "config/prod.yaml"]}, "ok"),
     ("llm", None, [("call_01", "read_file", {"path": "README.md"})]),
     ("tool", "read_file", {"path": "README.md"},
      {"ok": True, "content": "# demo-service\nDeploy with ./deploy.sh <config path>\n"}, "ok"),
     ("llm", None, [("call_02", "read_file", {"path": "deploy.sh"})]),
     ("tool", "read_file", {"path": "deploy.sh"},
      {"ok": True, "content": "#!/bin/sh\nset -eu\nCONFIG=\"$1\"\npython -m demo_service --config \"$CONFIG\"\n"}, "ok"),
-    ("llm", None, [("call_03", "grep", {"pattern": "config", "path": "deploy.sh"})]),
-    ("tool", "grep", {"pattern": "config", "path": "deploy.sh"},
+    ("llm", None, [("call_03", "search_files", {"pattern": "CONFIG", "target": "content", "path": "deploy.sh"})]),
+    ("tool", "search_files", {"pattern": "CONFIG", "target": "content", "path": "deploy.sh"},
      {"ok": True, "matches": [{"line": 3, "text": "CONFIG=\"$1\""}]}, "ok"),
     ("llm", None, [("call_04", "read_file", {"path": "config/base.yaml"})]),
     ("tool", "read_file", {"path": "config/base.yaml"},
@@ -93,12 +93,12 @@ PLAN = [
     ("llm", None, [("call_05", "read_file", {"path": "config/prod.yaml"})]),
     ("tool", "read_file", {"path": "config/prod.yaml"},
      {"ok": True, "content": "service: demo\nreplicas: 4\nregion: us-east-1\n"}, "ok"),
-    ("llm", None, [("call_06", "read_file", {"path": "config/staging.yaml"})]),
-    ("tool", "read_file", {"path": "config/staging.yaml"},
-     {"ok": False, "error": "FileNotFoundError: config/staging.yaml"}, "error"),
+    ("llm", None, [("call_06", "read_file", {"path": "config/prod.yml"})]),
+    ("tool", "read_file", {"path": "config/prod.yml"},
+     {"ok": False, "error": "FileNotFoundError: config/prod.yml"}, "error"),
 ]
 
-FINAL = (14, "I could not read config/staging.yaml, so I stopped before deploying.")
+FINAL = (14, "I could not read config/prod.yml, so I stopped before deploying.")
 
 
 def build() -> Path:
@@ -117,10 +117,12 @@ def build() -> Path:
         },
     )
     seq = 0
+    last_call_id = ""
     for entry in PLAN:
         kind = entry[0]
         if kind == "llm":
             _, content, calls = entry
+            last_call_id = calls[0][0] if calls else ""
             response = _response(seq, content=content, calls=calls)
             writer.append(
                 {
@@ -139,7 +141,7 @@ def build() -> Path:
             )
         else:
             _, tool_name, args, result, status = entry
-            call_id = f"call_{seq:02d}"
+            call_id = last_call_id
             writer.append(
                 {
                     "type": "tool_call",

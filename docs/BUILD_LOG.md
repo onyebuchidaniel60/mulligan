@@ -381,15 +381,108 @@ the catalog entry (enforced at install/update), per admission rule 14.
 
 ## Phase 6 — Demo + submit
 
-Status: **BLOCKED on operator inputs** (not on code)
+Status: **BLOCKED at the SHA-pin check** (see Phase 6 verification below)
 
 Done in-repo: the ≤90s shot list (`DEMO_VIDEO_PLAN.md`), production notes
 (`demo/notes.md`), and the deterministic fixture that makes the inspect/rewind/diff beats
 reproducible.
 
-Outstanding, and why:
-- **Record the demo** — needs `OPENROUTER_API_KEY`; it is not set in this environment and
-  `~/.hermes` does not exist. The branch beat is a live model run.
-- **Post on X / submit the Typeform** — operator accounts; outside the authority granted
-  here.
+## Phase 6 execution — dry run, live replay, video
 
+Run 2026-11-11/12 against the operator's Hermes v0.23.1 (`/root/.hermes/hermes-agent`).
+The catalog pin was **not** touched; HEAD moved ahead of it with documentation and demo
+assets only, which the operator accepted.
+
+### Step 1 — credential
+
+```
+$ grep -c '^OPENROUTER_API_KEY=' ~/.hermes/.env
+1
+```
+
+Present. The value was never printed or read into the transcript.
+
+### Step 2 — demo trace
+
+```
+$ python3 demo/build_demo_trace.py
+wrote /root/.hermes/replay-traces/r_demo_deploy.jsonl
+run_id: r_demo_deploy
+```
+
+Measured: **15 steps**, seq 0..14, first error at **13** (`read_file config/prod.yml`).
+The brief's "14 steps" was wrong; the fixture is ground truth.
+
+### Step 3 — install
+
+```
+$ cp -r /root/mulligan ~/.hermes/plugins/mulligan
+$ hermes plugins enable mulligan
+✓ Plugin mulligan enabled.
+$ hermes plugins list | grep mulligan
+│ mulligan │ enabled │ 0.1.0 │ ... │ git │
+```
+
+### Step 4 — real `hermes chat` dry run: PASSED
+
+```
+$ hermes chat --provider openrouter --model '~anthropic/claude-sonnet-latest' \
+    -q "read deploy/config.yaml" --oneshot --max-turns 4
+✗ Read config.yaml  0.8s [File not found: config.yaml]
+🔎 Find config.yaml  10.6s
+... 4 tool calls, 26s
+```
+
+New trace `r_20261111-222558_7697.jsonl` in `~/.hermes/replay-traces/`: header + **5
+steps** — `llm(read_file)` → `tool read_file` **status=error** → `llm(search_files)` →
+`tool search_files` ok → final `llm`. The `post_tool_call` annotation and the seq ordering
+both landed correctly on a real run.
+
+### Step 5 — live replay and video
+
+First live replay **desynced at step 1**. Diagnosis: the plugin's recording was correct
+(in the real dry-run trace every tool step's `tool_call_id` equals the id in the preceding
+assistant message); the **fixture** derived `tool_call_id` from the step index and used
+tool names Hermes does not have (`list_files`, `grep`), which Hermes auto-repaired
+(`list_files` → `write_file`). Fixed in `demo/build_demo_trace.py` — ids taken from the
+preceding assistant message, only real tools (`read_file`, `search_files`) used. Step count
+and failure index unchanged (15 / 13).
+
+Second issue found by the live run: after the edit the model still deployed with
+`config/staging.yaml`, so the branch failed elsewhere, and the demo workspace inside the
+repo inherited `AGENTS.md` ("no production deploy"). Fixed as demo assets: the fixture goal
+and failing path are now coherent (`config/prod.yml` → `config/prod.yaml`), and the
+workspace moved to `/tmp/mulligan-demo-workspace`.
+
+After those fixes, a real replay:
+
+```
+mg_play 6.0s
+served 7 llm + 6 tool step(s) from the record (13 total)
+live 1 llm + 1 tool step(s) (2 total)
+```
+
+`mg_diff` on it: `A 15 steps · FAILED at 13`, `B · no failing step`, first divergence at 13
+(different tool arguments), 13 served + 2 live. A later take had 4 live steps — the live
+tail is model-dependent, and the plan says so.
+
+Video: `vhs demo/mulligan.tape` → `demo/mulligan-90s.mp4`.
+
+```
+$ ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 demo/mulligan-90s.mp4
+43.800000
+$ ffprobe -v error -show_entries stream=codec_type -of csv=p=0 demo/mulligan-90s.mp4
+video
+```
+
+43.8s, 1600×900, silent (VHS writes no audio track). Content verified frame by frame:
+`mg_list`, the 15-step `mg_inspect` with the red step 13, the real chat replay with the
+banner and served/live counts, and the `mg_diff` side-by-side with `≠` at 13.
+
+VHS tooling note: it needs a headless browser, and as root the browser must run
+`--no-sandbox`; the local Chromium was wrapped accordingly. Recording-tool concern only.
+
+### Phase 6 remaining
+
+Operator only: optional narration, post on X tagging `@NousResearch`, submit the Typeform
+with https://github.com/NousResearch/hermes-agent/pull/153805 and the video.

@@ -1,81 +1,106 @@
 ﻿# Mulligan — Demo (≤90s)
 
-Capture: manual screen recording (OBS / QuickTime). No Playwright — CLI only.
-Deadline: 5PM EST Nov 11.
+## Pre-recording status
 
-## Reality check on the numbers
+Executed 2026-11-11/12. Raw commands and output: `docs/BUILD_LOG.md` § Phase 6 execution.
 
-The demo fixture has **15 steps** and fails at **step 13**. A replay to that point serves
-**13 steps deterministically** and executes **2 live**. These are the numbers from
-`demo/build_demo_trace.py` and `mg_diff`; do not narrate different ones.
+| Step | Result |
+|---|---|
+| **1. Credential** | `grep -c '^OPENROUTER_API_KEY=' ~/.hermes/.env` → **1** (present; value never printed) |
+| **2. Demo trace** | `r_demo_deploy` — **15 steps** (seq 0..14), first error at **13** (`read_file config/prod.yml`) |
+| **3. Plugin installed** | copied to `~/.hermes/plugins/mulligan`, `hermes plugins enable mulligan` → **enabled**, v0.1.0 |
+| **4. Real `hermes chat` dry run** | **PASSED** — real trace `r_20261111-222558_7697`, 5 steps, `read_file` File-not-found at step 1, annotated `error` by `post_tool_call` |
+| **5. Video** | `demo/mulligan-90s.mp4` — **43.8 s**, 1600×900, H.264, **no audio track** (VHS records silent; add narration separately) |
+| **SHA pin** | unchanged at `fef894a4552d72204c84665f67042467901f135a`; HEAD is newer. Accepted as-is; the PR was not touched |
+| **Fixture-to-plan check** | Plan and fixture agree: **15 steps, fails at 13**. The brief's "14 steps" is wrong — the fixture is ground truth |
 
-## Prep (once, before recording)
+### What the live replay actually did
+
+`mg_play` in a real child session: **13 steps served (7 llm + 6 tool), 0 provider calls,
+0 tool invocations, no DESYNC**, then `2–4` live steps depending on what the model does
+after the edit. Reproduced twice, `~6–9s` per replay.
+
+### A real defect the dry run caught (fixture, not plugin)
+
+The first live replay desynced at step 1. The **plugin recorded correctly** — in the real
+trace every tool step's `tool_call_id` matches the id in the preceding assistant message.
+The **fixture** did not: it derived `tool_call_id` from the step index and used tool names
+Hermes does not have (`list_files`, `grep`), which Hermes auto-repaired (`list_files` →
+`write_file`), so the child's calls never matched. Fixed in `demo/build_demo_trace.py`:
+ids are taken from the preceding assistant message, and only real tools
+(`read_file`, `search_files`) are used. Step count and failure index unchanged.
+
+The first branch also showed the model deploying with `config/staging.yaml` even after the
+edit, so the branch failed elsewhere. The fixture goal and failing path were made coherent
+(`config/prod.yml` → edited to `config/prod.yaml`), and the demo workspace was moved out of
+the repo so it does not inherit `AGENTS.md` ("no production deploy").
+
+## Recording
+
+VHS tape: `demo/mulligan.tape` → `demo/mulligan-90s.mp4`
 
 ```bash
-export HERMES_HOME=$HOME/.mulligan-demo
-mkdir -p "$HERMES_HOME"
-python3 demo/build_demo_trace.py          # writes r_demo_deploy (15 steps, fails at 13)
-hermes plugins enable mulligan
-hermes chat --provider openrouter --model '~anthropic/claude-sonnet-latest'
+cd /root/mulligan && vhs demo/mulligan.tape
 ```
 
-The baseline is a fixture so the inspect/rewind/edit beats never drift. The *branch* is a
-real live run and needs `OPENROUTER_API_KEY`.
+The tape drives real commands: `demo/mg.py` calls the installed plugin's tool handlers and
+prints their exact output; the replay beat runs a real `hermes chat --oneshot` session
+against `~/.hermes/replay-traces/r_demo_deploy.jsonl`.
 
-## Story (5 beats)
+VHS needs a browser for its renderer; under root it must run sandboxless (the local
+Chromium was wrapped with `--no-sandbox`). Not a plugin concern — a recording-tool concern.
 
-**0–10s — the problem**
-Overlay: "The agent broke at step 13. Normally you re-run from scratch."
+## Story (as recorded)
 
-**10–28s — inspect**
-```
-mg_inspect run_id=r_demo_deploy
-```
-Timeline: 15 steps, red at 13 (`read_file config/staging.yaml` → FileNotFoundError).
+**Title** — "MULLIGAN · Take a mulligan on any Hermes decision." A recorded run: 15 steps,
+breaks at step 13.
 
-**28–42s — rewind + edit**
-```
-mg_rewind run_id=r_demo_deploy to=13
-mg_edit run_id=r_demo_deploy seq=13 args={"path":"config/prod.yaml"}
-```
-Point at the "before / after" lines.
+**`mg_list`** — one run in `~/.hermes/replay-traces`.
 
-**42–70s — play**
-```
-mg_play run_id=r_demo_deploy
-```
-The banner prints. Steps 0–12 flash past as "served from the record, 0 provider calls,
-0 side effects". Step 13 executes live with the edited path and succeeds; the loop
-continues live to the answer.
+**`mg_inspect r_demo_deploy`** — 15-step timeline, red at 13
+(`read_file({"path": "config/prod.yml"})` → FileNotFoundError), "first failing step: 13".
 
-**70–85s — diff**
-```
-mg_diff run_a=r_demo_deploy run_b=<branch id printed by mg_play>
-```
-Side by side: A fails at 13, B has no failing step, "steps 0..12 served deterministically,
-2 executed live", first divergence at step 13 (different tool arguments).
+**Rewind / edit / replay** — a real chat session calls `mg_rewind`, `mg_edit`, `mg_play`.
+On screen: `before {"path": "config/prod.yml"}` / `after {"path": "config/prod.yaml"}`,
+the replay banner, `Served: 7 llm + 6 tool steps (13 total)`, `Live: … (model-dependent)`.
 
-**85–90s — tagline**
-"Rewind. Edit. Replay. Take a mulligan on any Hermes decision."
+**`mg_diff r_demo_deploy latest`** — A: 15 steps, FAILED at 13. B: branch, no failing step.
+"steps 0..12 served deterministically, N executed live", first divergence at 13
+(different tool arguments), then the side-by-side table with `≠` at step 13.
+
+**Tagline** — "Rewind. Edit. Replay. Take a mulligan on any Hermes decision."
 
 ## Narration
 
-Tied to what is on screen. One continuous voice track, no long silences, no describing
-anything that is not visible.
+Optional for the technical demo (the tape is silent). If added, keep it tied to what is on
+screen and under 90s total. Suggested lines:
+
+- 0–6s: "The agent broke at step 13. Normally you re-run from scratch."
+- 6–18s: "Mulligan recorded every LLM call and tool call. Here's the timeline — red at 13."
+- 18–32s: "Rewind to 13, change one decision: prod.yml becomes prod.yaml."
+- 32–40s: "Replay runs in a fresh child session. Thirteen steps served from the record,
+  zero provider calls, zero side effects. Only the edited step and after run live."
+- 40–50s: "Diff: same run on the left, counterfactual on the right, first divergence at 13."
 
 ## Redaction
 
-- Use the fixture baseline only; it contains no real paths or prompts.
+- The fixture contains no real paths, prompts, or operator data.
 - Never show `OPENROUTER_API_KEY`, `~/.hermes/.env`, or `auth.json`.
-- If a live branch prints a provider error, cut and re-record; do not show keys.
+- The recording uses `~/.hermes` as the profile; traces from other sessions were removed
+  before the take.
 
 ## Output
 
-- `demo/mulligan-90s.mp4` (≤90s, audio + video verified)
-- `demo/script.md` (this file)
-- `demo/notes.md` (production notes)
+- `demo/mulligan-90s.mp4` — 43.8s, 1600×900, silent
+- `demo/mulligan.tape` — the reproducible tape
+- `demo/query.txt` — the chat prompt used in the replay beat
+- `demo/mg.py` — CLI over the real tool handlers
+- `demo/build_demo_trace.py` — deterministic fixture
+- `demo/notes.md` — production notes
 
-## Submission
+## Remaining operator actions
 
-- Post on X tagging `@NousResearch`
-- Submit the Typeform with the PR link + video link
+1. Optional: add narration to `demo/mulligan-90s.mp4` (it is silent).
+2. Post on X tagging `@NousResearch`.
+3. Submit the Typeform with the PR link
+   (https://github.com/NousResearch/hermes-agent/pull/153805) and the video.

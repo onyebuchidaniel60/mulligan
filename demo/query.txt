@@ -1,0 +1,7 @@
+Mulligan demo. Call these three tools in order, with no preamble and no extra tool calls:
+mg_rewind(run_id='r_demo_deploy', to=13)
+mg_edit(run_id='r_demo_deploy', seq=13, args={'path':'config/prod.yaml'})
+mg_play(run_id='r_demo_deploy')
+
+Then reply with: the two before/after lines from mg_edit, the mg_play banner, and the
+served and live step counts. Nothing else.
