@@ -9,7 +9,7 @@ Tests and evidence: 15 tests OK; `hermes plugins validate` exit 0;
   Details: docs/BUILD_LOG.md.
 Preview/staging URL: N/A (no frontend)
 Deployed commit: —
-Pinned SHA: 79f445eb6e038ce8336f35d286497fb862db32ab
+Pinned SHA: fef894a4552d72204c84665f67042467901f135a
 Catalog PR: https://github.com/NousResearch/hermes-agent/pull/153805
 Reference image / UI skill: N/A (CLI plugin)
 Documentation status: complete (README, BUILD_LOG, SETUP, TESTING, CONFIGURATION,

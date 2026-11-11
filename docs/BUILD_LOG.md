@@ -373,7 +373,7 @@ Status: **COMPLETE** (except the video steps that need a credential)
 | `hermes plugins validate /root/mulligan` | **exit 0**, all checks ✓ |
 | `hermes plugins doctor /root/mulligan --ci` | **exit 0**, "6 tool(s), 2 hook(s)" |
 | `scripts/validate_plugin_catalog.py submission/plugin-catalog/mulligan.yaml` | **OK: 1 file(s) valid** |
-| Catalog pin | 40-char SHA `79f445eb6e038ce8336f35d286497fb862db32ab` |
+| Catalog pin | 40-char SHA `fef894a4552d72204c84665f67042467901f135a` |
 | PR | https://github.com/NousResearch/hermes-agent/pull/153805 (1 file added, +38) |
 
 `requires_hermes: ">=0.23.0"` is declared in both `plugin.yaml` (enforced by the loader) and
