@@ -1,0 +1,128 @@
+# Narration timing record — demo/mulligan-narrated.mp4
+
+Generated 2026-11-12. Voice: `en-US-GuyNeural` (Edge TTS 7.3.1). Edge TTS only.
+
+## Why there are two sets of numbers
+
+Step 2 of the brief asks for beat starts by summing the tape's `Sleep` values. Those sums
+describe *wall-clock* time, and VHS does not preserve wall-clock time: it drops frames while
+the terminal is idle, so the encoded video is shorter than the tape took to run. Summing the
+old single-take tape gives 75.6 s of wall time for a 43.8 s video — placing audio there would
+desync every beat.
+
+The video is also now rendered as three segments (`tape-a`, `tape-b`, `tape-c`) and
+concatenated, precisely so the beats hold long enough to read.
+
+So placement uses the **measured video timeline**, obtained by sampling the encoded file at
+10 fps and locating the screen clears and output bursts. That is measurement, not a guess.
+Both sets are recorded below.
+
+## Tape-derived (wall clock, legacy single-take tape — reference only)
+
+```
+beat_1_start_ms=2246
+beat_2_start_ms=7682
+beat_3_start_ms=23392
+beat_4_start_ms=56760
+beat_5_start_ms=70542
+total_tape_ms=75592
+```
+
+## Measured video timeline (used for placement)
+
+Detected transitions in `demo/mulligan-90s.mp4` (10 fps ink profile):
+
+```
+  6.1s  clear after the title screen        -> beat 2 (mg_list) starts
+  6.6s  mg_list output
+  9.7s  mg_inspect output (15 steps, red at 13)
+ 14.4s  clear                              -> beat 3 (chat: rewind/edit/play)
+ 33.2s  replay banner + served/live counts
+ 46.4s  clear                              -> beat 4 (mg_diff)
+ 47.4s  diff table on screen
+ 51.8s  clear                              -> beat 5 (tagline)
+ 61.48s end of video
+```
+
+```
+beat_1_start_ms=0
+beat_2_start_ms=6100
+beat_3_start_ms=14400
+beat_4_start_ms=46400
+beat_5_start_ms=51800
+total_video_ms=61480
+```
+
+## Audio segments
+
+```
+beat_1_audio_ms=5448
+beat_2_audio_ms=4032
+beat_3_audio_ms=11328
+beat_4_audio_ms=3552
+beat_5_audio_ms=7872
+```
+
+Text was used exactly as written in the brief; nothing was shortened.
+
+## Fit check
+
+| Beat | Start | Audio end | Next beat | Slack | Verdict |
+|---|---|---|---|---|---|
+| 1 | 0 ms | 5 448 ms | 6 100 ms | +652 ms | fits |
+| 2 | 6 100 ms | 10 132 ms | 14 400 ms | +4 268 ms | fits |
+| 3 | 14 400 ms | 25 728 ms | 46 400 ms | +20 672 ms | fits |
+| 4 | 46 400 ms | 49 952 ms | 51 800 ms | +1 848 ms | fits |
+| 5 | 51 800 ms | 59 672 ms | 61 480 ms (end) | +1 808 ms | fits |
+
+**Option (b) was used once, for beat 5.** The tagline clip is 7.87 s and the original take
+left only 4.4 s at the end, so the last `Sleep` in `demo/tape-c.tape` was raised from 5 s to
+11 s and segment C re-rendered. The final video grew from 58.8 s to 61.5 s; the tagline now
+holds 9.7 s. No narration text was shortened, and no other beat needed a re-render. (An
+intermediate 9 s render left a 0.55 s overflow, just over the 500 ms threshold, so it was
+raised again.)
+
+## Mux
+
+```
+ffmpeg -i demo/mulligan-90s.mp4 -i demo/narration-1.mp3 ... -i demo/narration-5.mp3 \
+  -filter_complex "[1:a]adelay=0:all=1[n1];[2:a]adelay=6100:all=1[n2];\
+[3:a]adelay=14400:all=1[n3];[4:a]adelay=46400:all=1[n4];[5:a]adelay=51800:all=1[n5];\
+[n1][n2][n3][n4][n5]amix=inputs=5:duration=longest:normalize=0,apad[a]" \
+  -map 0:v -map "[a]" -c:v copy -c:a aac -b:a 128k -ar 48000 -shortest \
+  demo/mulligan-narrated.mp4
+```
+
+`apad` + `-shortest` keeps the video length exactly; the audio tail is padded with silence
+to 61.48 s.
+
+## Verification
+
+```
+$ ffprobe -v error -show_entries format=duration -of default=nw=1 demo/mulligan-narrated.mp4
+duration=61.480000
+
+$ ffprobe -v error -show_entries stream=index,codec_type,codec_name,width,height,channels,sample_rate \
+    -of default=nw=1 demo/mulligan-narrated.mp4
+index=0  codec_name=h264  codec_type=video  width=1600  height=900
+index=1  codec_name=aac   codec_type=audio  sample_rate=48000  channels=1
+
+$ ffmpeg -i demo/mulligan-narrated.mp4 -map 0:a -af volumedetect -f null -
+mean_volume: -23.8 dB
+max_volume: -1.7 dB
+```
+
+Duration 61.48 s = raw video duration (0.00 s drift). One h264 stream, one aac stream, audio
+non-empty.
+
+Spot checks by playback position (mean volume over 0.8 s):
+
+```
+  2s -19.9 dB   beat 1 speaking
+  7s -19.6 dB   beat 2 speaking
+ 12s -91.0 dB   gap between beats 2 and 3
+ 16s -21.2 dB   beat 3 speaking
+ 47s -19.0 dB   beat 4 speaking
+ 55s -19.2 dB   beat 5 speaking
+ 60s -91.0 dB   trailing silence after the last word
+```

@@ -3,3 +3,7 @@ __pycache__/
 demo/*.mp4
 demo/*.mov
 .DS_Store
+demo/*.mp4
+demo/*.mov
+demo/.seg-*.mp4
+demo/narration-*.mp3

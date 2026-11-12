@@ -10,7 +10,7 @@ Executed 2026-11-11/12. Raw commands and output: `docs/BUILD_LOG.md` § Phase 6 
 | **2. Demo trace** | `r_demo_deploy` — **15 steps** (seq 0..14), first error at **13** (`read_file config/prod.yml`) |
 | **3. Plugin installed** | copied to `~/.hermes/plugins/mulligan`, `hermes plugins enable mulligan` → **enabled**, v0.1.0 |
 | **4. Real `hermes chat` dry run** | **PASSED** — real trace `r_20261111-222558_7697`, 5 steps, `read_file` File-not-found at step 1, annotated `error` by `post_tool_call` |
-| **5. Video** | `demo/mulligan-90s.mp4` — **43.8 s**, 1600×900, H.264, **no audio track** (VHS records silent; add narration separately) |
+| **5. Video** | `demo/mulligan-90s.mp4` — **61.5 s**, 1600×900, H.264, silent. Narrated cut: `demo/mulligan-narrated.mp4` — **61.5 s**, Edge TTS `en-US-GuyNeural` |
 | **SHA pin** | unchanged at `fef894a4552d72204c84665f67042467901f135a`; HEAD is newer. Accepted as-is; the PR was not touched |
 | **Fixture-to-plan check** | Plan and fixture agree: **15 steps, fails at 13**. The brief's "14 steps" is wrong — the fixture is ground truth |
 
@@ -37,11 +37,15 @@ the repo so it does not inherit `AGENTS.md` ("no production deploy").
 
 ## Recording
 
-VHS tape: `demo/mulligan.tape` → `demo/mulligan-90s.mp4`
+VHS tapes: `demo/tape-a.tape` (title, list, inspect), `demo/tape-b.tape` (live replay),
+`demo/tape-c.tape` (diff, tagline) → concatenated to `demo/mulligan-90s.mp4`
 
 ```bash
-cd /root/mulligan && vhs demo/mulligan.tape
+cd /root/mulligan && ./demo/build_video.sh
 ```
+
+The three segments exist because VHS drops idle frames: one long tape compressed the beats
+and left the diff on screen for ~1.3 s. Rendering apart gives each beat a deterministic hold.
 
 The tape drives real commands: `demo/mg.py` calls the installed plugin's tool handlers and
 prints their exact output; the replay beat runs a real `hermes chat --oneshot` session
@@ -92,7 +96,7 @@ screen and under 90s total. Suggested lines:
 ## Output
 
 - `demo/mulligan-90s.mp4` — 43.8s, 1600×900, silent
-- `demo/mulligan.tape` — the reproducible tape
+- `demo/tape-a|b|c.tape` + `demo/build_video.sh` — the reproducible build
 - `demo/query.txt` — the chat prompt used in the replay beat
 - `demo/mg.py` — CLI over the real tool handlers
 - `demo/build_demo_trace.py` — deterministic fixture
@@ -104,3 +108,30 @@ screen and under 90s total. Suggested lines:
 2. Post on X tagging `@NousResearch`.
 3. Submit the Typeform with the PR link
    (https://github.com/NousResearch/hermes-agent/pull/153805) and the video.
+
+## Narration added
+
+Microsoft Edge TTS, voice **`en-US-GuyNeural`** (Edge TTS 7.3.1). No paid services.
+Full timing record and the mux command: `demo/narration_timings.txt`.
+
+| Beat | On screen | Start | Audio | Slack to next beat |
+|---|---|---|---|---|
+| 1 title | 0.0 s | **0 ms** | 5 448 ms | +652 ms |
+| 2 `mg_list` + `mg_inspect` | 6.1 s | **6 100 ms** | 4 032 ms | +4 268 ms |
+| 3 rewind / edit / play | 14.4 s | **14 400 ms** | 11 328 ms | +20 672 ms |
+| 4 `mg_diff` | 46.4 s | **46 400 ms** | 3 552 ms | +1 848 ms |
+| 5 tagline | 51.8 s | **51 800 ms** | 7 872 ms | +1 808 ms |
+
+- **Total video duration:** 61.48 s (raw and narrated are identical; 0.00 s drift).
+- **Text shortened:** none. All five segments use the wording exactly as specified.
+- **Tape re-rendered:** yes, once — the tagline clip is 7.87 s and the original take left
+  4.4 s at the end, so the last `Sleep` in `demo/tape-c.tape` went 5 s → 11 s and segment C
+  was re-rendered. Final video 58.8 s → 61.5 s; the tagline now holds 9.7 s.
+- **Placement note:** beat starts were measured from the encoded video (10 fps ink profile),
+  not summed from the tape's `Sleep` values — VHS drops idle frames, so the tape's wall-clock
+  sums (75.6 s) do not describe the 61.5 s file. Both sets are in `demo/narration_timings.txt`.
+
+Mux result verified with `ffprobe`: 1 h264 video stream, 1 aac audio stream (48 kHz, mono),
+non-empty (`mean_volume -23.8 dB`, `max_volume -1.7 dB`).
+
+**File:** `demo/mulligan-narrated.mp4`
