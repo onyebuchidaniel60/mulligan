@@ -1,10 +1,10 @@
 ﻿# Mulligan â€” Implementation Plan
 
-Phases are internal checkpoints. Test -> fix -> commit -> update AI_HANDOFF.md -> continue.
+Phases are internal checkpoints. Test -> fix -> commit -> update docs/AI_HANDOFF.md -> continue.
 No routine operator approval stops. The only gate is Phase 0 API verification.
 
 ## Phase 0 â€” API verification spike (HARD GATE)
-Objective: resolve the four API unknowns; complete OPERATOR_INTAKE.md.
+Objective: resolve the four API unknowns; complete docs/OPERATOR_INTAKE.md.
 Tasks:
   (a) Confirm ctx.register_middleware signature and callback kwargs
       (request, original_request, next_call, tool_name, args, session_id)
@@ -14,9 +14,9 @@ Tasks:
       (does tool_execution run AFTER approval checks?)
   (d) Confirm ctx.register_tool handler signature and return contract
 Acceptance: all four answers recorded with a doc citation in docs/BUILD_LOG.md;
-            OPERATOR_INTAKE.md has zero open critical items.
+            docs/OPERATOR_INTAKE.md has zero open critical items.
 Blocker rule: if any answer invalidates the fixed architecture, STOP and report.
-Files: docs/BUILD_LOG.md, OPERATOR_INTAKE.md, AI_HANDOFF.md
+Files: docs/BUILD_LOG.md, docs/OPERATOR_INTAKE.md, docs/AI_HANDOFF.md
 Next: Phase 1
 
 ## Phase 1 â€” Scaffold + record-only

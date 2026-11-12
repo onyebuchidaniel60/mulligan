@@ -151,10 +151,10 @@ request that carries the replay nonce" step. See Design Note DN-1 below.
 5. Emit `post_tool_call` observer hooks.
 6. Apply `transform_tool_result` hooks.
 
-Consequences for Mulligan, all already assumed by `ARCHITECTURE.md`:
+Consequences for Mulligan, all already assumed by `docs/ARCHITECTURE.md`:
 - Serving a recorded result inside `tool_execution` cannot suppress an approval prompt
   that step 3 already raised. The MVP demo therefore stays on non-dangerous tools
-  (`read_file` with a bad path), exactly as `PROJECT_SPEC.md` R4 says.
+  (`read_file` with a bad path), exactly as `docs/PROJECT_SPEC.md` R4 says.
 - `tool_request` runs *before* approvals, so a branch edit applied there is what guardrails
   and the human approve. That is the safe place to apply `mg_edit`, and it is what this
   implementation does.
@@ -233,7 +233,7 @@ and the gap is stated in the handoff rather than papered over.
 
 ### Compatibility verdict
 
-**All four answers are compatible with `ARCHITECTURE.md`.** No redesign required.
+**All four answers are compatible with `docs/ARCHITECTURE.md`.** No redesign required.
 `tool_execution` sits after approvals (as assumed), `tool_request` sits before them (so the
 branch edit is approval-correct), child sessions share plugin module state (so the
 module-level registry works), and tool handlers follow `(args, **kwargs) -> JSON str`.
@@ -361,7 +361,7 @@ first divergence: step 13 (different tool arguments)
  13 ≠read_file({"path": "config/staging.yaml"})   read_file({"path": "config/prod.yaml"})
 ```
 
-The demo narration in `DEMO_VIDEO_PLAN.md` now uses these numbers (15 steps, failure at 13,
+The demo narration in `docs/DEMO_VIDEO_PLAN.md` now uses these numbers (15 steps, failure at 13,
 13 served + 2 live), not the pre-implementation guesses.
 
 ## Phase 5 — Validation + submission
@@ -383,7 +383,7 @@ the catalog entry (enforced at install/update), per admission rule 14.
 
 Status: **BLOCKED at the SHA-pin check** (see Phase 6 verification below)
 
-Done in-repo: the ≤90s shot list (`DEMO_VIDEO_PLAN.md`), production notes
+Done in-repo: the ≤90s shot list (`docs/DEMO_VIDEO_PLAN.md`), production notes
 (`demo/notes.md`), and the deterministic fixture that makes the inspect/rewind/diff beats
 reproducible.
 

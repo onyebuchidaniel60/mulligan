@@ -3,8 +3,8 @@
 | Input | Status | Source | Notes |
 |---|---|---|---|
 | Project = Mulligan | DECIDED | operator | counterfactual replay for Hermes |
-| Scope = MVP per PROJECT_SPEC.md | DECIDED | operator | |
-| Architecture fixed per ARCHITECTURE.md | DECIDED | operator | |
+| Scope = MVP per docs/PROJECT_SPEC.md | DECIDED | operator | |
+| Architecture fixed per docs/ARCHITECTURE.md | DECIDED | operator | |
 | OPENROUTER_API_KEY | **MISSING HERE** | env check | not in process env; `~/.hermes` does not exist. Operator must export it to record the live demo. Plugin never reads it. |
 | Hermes installed | **YES — v0.23.1** | `hermes --version` | release tag `v0.23.1` from source tree. PyPI `hermes-agent` is 0.19.0 and too old (no `ctx.subagent_lifecycle`). |
 | Demo failure case = read_file ENOENT | DECIDED | operator | non-dangerous, no approvals |
@@ -33,7 +33,7 @@
     the replay binding must travel in `context` and be bound on first observed request.
 
 (c) Order is `tool_request` → availability/guardrails/**approvals** → `tool_execution` →
-    `post_tool_call`. So `tool_execution` runs AFTER approvals (as ARCHITECTURE.md assumes),
+    `post_tool_call`. So `tool_execution` runs AFTER approvals (as docs/ARCHITECTURE.md assumes),
     and `tool_request` is the approval-safe place to apply a branch edit.
 
 (d) `ctx.register_tool(name, toolset, schema, handler, check_fn, requires_env, is_async,

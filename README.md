@@ -2,6 +2,61 @@
 
 Take a mulligan on any Hermes decision.
 
+## Quickstart
+
+Get from zero to a working replay in under 2 minutes.
+
+### 1. Install
+
+Prerequisite: Hermes Agent >= 0.23.0.
+
+```
+git clone https://github.com/onyebuchidaniel60/mulligan.git
+cp -r mulligan ~/.hermes/plugins/
+hermes plugins enable mulligan
+hermes plugins list | grep mulligan   # table row: mulligan | enabled | 0.1.0
+```
+
+### 2. Record a run
+
+Just use Hermes normally. Every LLM call and tool call is captured to
+`~/.hermes/replay-traces/`. Run something that fails to see the debugger shine:
+
+```
+hermes chat
+# ask the agent to read a file that doesn't exist, e.g.:
+#   "read deploy/config.yaml"
+# /exit
+```
+
+### 3. Inspect, rewind, replay
+
+Open a new Hermes chat. The `mg_*` names are **agent tools, not shell commands** — ask for
+them by name and the model calls them with these arguments:
+
+```
+hermes chat
+
+> Use mg_list to find my run id.
+> Use mg_inspect with run_id="r_...".
+> Use mg_rewind with run_id="r_..." and to=<fail_seq>.
+> Use mg_edit with run_id="r_...", seq=<fail_seq>, args={"path":"correct/path.yaml"}.
+> Use mg_play with run_id="r_...".
+> Use mg_diff with run_a="r_..." and run_b="<branch id printed by mg_play>".
+```
+
+What you'll see:
+- The prefix replays with 0 model calls and 0 tool side effects
+- Only the branch (from the edited step) runs live
+- `mg_diff` shows the first divergence, both step counts, and how many steps were served
+  versus executed live
+
+### Demo
+
+[Watch the 51-second demo](https://x.com/Turnttfup99/status/2120677423532417107)
+
+Music in the demo: "Plathe (Beatless Ambient Mix)" by POA, CC BY 3.0, via Jamendo.
+
 A Hermes Agent plugin that records a run, rewinds to any step, edits one decision, replays
 forward, and diffs the counterfactual against the original.
 
@@ -13,6 +68,8 @@ mg_edit      replace the arguments of one tool call (one edit per branch)
 mg_play      run the replay in a fresh child session
 mg_diff      side-by-side comparison, first divergence, served vs live
 ```
+
+[See it in action →](https://x.com/Turnttfup99/status/2120677423532417107)
 
 ## The invariant that matters
 
@@ -137,6 +194,18 @@ Mulligan only sees the request/response payloads the middleware is handed.
 HERMES_SOURCE=/path/to/hermes PYTHONPATH=/path/to/hermes python3 -m unittest discover -s tests -v
 hermes plugins validate .
 ```
+
+## Documentation
+
+- [Project Spec](docs/PROJECT_SPEC.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
+- [Setup](docs/SETUP.md)
+- [Configuration](docs/CONFIGURATION.md)
+- [Testing](docs/TESTING.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Design Notes](docs/DESIGN_NOTES.md)
+- [Build Log](docs/BUILD_LOG.md)
 
 ## N/A
 

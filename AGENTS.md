@@ -1,7 +1,7 @@
 ﻿# Mulligan â€” Persistent implementation rules
 
 ## Source of truth
-PROJECT_SPEC.md, ARCHITECTURE.md, IMPLEMENTATION_PLAN.md.
+docs/PROJECT_SPEC.md, docs/ARCHITECTURE.md, docs/IMPLEMENTATION_PLAN.md.
 Architecture is FIXED. Do not redesign. Do not expand scope.
 
 ## Autonomy
@@ -31,7 +31,7 @@ Architecture is FIXED. Do not redesign. Do not expand scope.
 At each checkpoint, record:
   - test output
   - commit SHA
-  - update to AI_HANDOFF.md
+  - update to docs/AI_HANDOFF.md
   - update to docs/BUILD_LOG.md
 Never claim success without evidence. If a test cannot be run, state why.
 
