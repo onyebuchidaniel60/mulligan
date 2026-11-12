@@ -7,3 +7,6 @@ demo/*.mp4
 demo/*.mov
 demo/.seg-*.mp4
 demo/narration-*.mp3
+demo/music/*.mp3
+demo/narration-mix.wav
+demo/video-raw.mp4

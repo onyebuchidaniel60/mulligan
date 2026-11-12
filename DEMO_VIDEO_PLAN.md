@@ -135,3 +135,69 @@ Mux result verified with `ffprobe`: 1 h264 video stream, 1 aac audio stream (48 
 non-empty (`mean_volume -23.8 dB`, `max_volume -1.7 dB`).
 
 **File:** `demo/mulligan-narrated.mp4`
+
+## Final cut
+
+Re-edited for pacing and a problem → solution narration, with a music bed.
+
+| | |
+|---|---|
+| Raw video before re-cut | **61.48 s** (`demo/mulligan-90s.mp4`) |
+| Raw video after re-cut | **50.88 s** (`demo/video-raw.mp4`) |
+| Final with narration + music | **50.86 s** (`demo/mulligan-final.mp4`) |
+
+**Approach used: B (post-cut), with speed ramps.** The replay beat held ~15 s of static
+waiting — model "thinking" and the `mg_play` call — where nothing on screen changed. Two
+stretches were speed-ramped instead of deleted, so no content is lost: 17.5–22.8 s at 3×
+(1.8 s) and 22.8–33.2 s at 2.5× (4.2 s). The post-answer shell footer (40.0–46.4 s) was
+trimmed to a 1.2 s glimpse, and the tail lost 1.2 s. No beat was removed.
+
+Silence map, before → after (visual static runs from a 10 fps ink profile, since the master
+had no audio):
+
+```
+before:  17.5–22.8 s static (5.3 s) · 22.8–33.2 s near-static (10.4 s) · 40.0–46.4 s footer (6.4 s)
+after:   1.8 s · 4.2 s · 1.2 s          (all under the ~2 s guidance)
+```
+`silencedetect=noise=-40dB:d=1.5` on the final mix: **no silence intervals** — the bed is
+continuous.
+
+### Music
+
+- **Track:** "Plathe (Beatless Ambient Mix)" by **POA**
+- **Licence:** CC BY 3.0 — https://creativecommons.org/licenses/by/3.0/
+- **Source:** https://www.jamendo.com/track/596719
+- **File:** `demo/music/bed.mp3` (109.06 s, 44.1 kHz stereo, instrumental)
+- Full provenance and the required credit line: `demo/music/SOURCE.txt`
+
+Pixabay returned 403 to automated requests from this environment, and Mixkit's catalogue is
+JavaScript-rendered — its pages expose preview URLs but no titles, artists or licence
+metadata, so a track could not be cited. The bed was therefore taken from a CC BY 3.0 track
+via the Openverse API, which returns title, creator and licence with each result. **CC BY
+requires credit** — publish the line in `demo/music/SOURCE.txt` with the video.
+
+### Mix
+
+Bed at `volume=0.24` (≈ −12.4 dB gain, measured −28.2 dB in music-only regions), ducked by
+`sidechaincompress=threshold=0.05:ratio=8:attack=5:release=300` off the voice bus, then
+`amix=normalize=0`.
+
+Measured: music-only −28.2 dB (target −30…−24) · voice −19.6 dB (target −18…−22) ·
+peak −1.5 dB (no clipping).
+
+### Narration
+
+Edge TTS `en-US-GuyNeural`, `--rate=-5%`, five segments, problem → solution:
+
+| # | Beat | Starts | Audio | Text |
+|---|---|---|---|---|
+| 1 | title | 1.5 s | 8.52 s | Your agent breaks at step thirteen. You re-run the whole thing from scratch — new tokens, new cost, no comparison. |
+| 2 | `mg_list` + `mg_inspect` | 9.6 s | 8.38 s | Mulligan records every step. Here's the exact failure, on the exact tool call, with the exact arguments. |
+| 3 | rewind / edit / play | 17.9 s | 14.04 s | Rewind to the decision. Edit it. Replay. Steps before the branch replay instantly — zero model calls, zero side effects. Only the branch runs live. |
+| 4 | `mg_diff` | 35.0 s | 6.65 s | Compare original versus counterfactual. First divergence: step thirteen. |
+| 5 | tagline | 42.3 s | 8.28 s | Rewind. Edit. Replay. Take a mulligan on any Hermes decision. |
+
+Segments 1 and 4 were shortened by filler only (see `demo/narration_timings.txt`); the other
+three use the specified wording verbatim.
+
+**File:** `demo/mulligan-final.mp4`

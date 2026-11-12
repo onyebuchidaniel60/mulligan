@@ -1,0 +1,36 @@
+Music bed — source and licence
+================================
+
+Track:    "Plathe (Beatless Ambient Mix)"
+Artist:   POA  (https://www.jamendo.com/artist/360724/POA)
+Licence:  Creative Commons Attribution 3.0 (CC BY 3.0)
+          https://creativecommons.org/licenses/by/3.0/
+Track page: https://www.jamendo.com/track/596719
+Download:   https://prod-1.storage.jamendo.com/?trackid=596719&format=mp32
+Duration:   109.06 s, 44.1 kHz stereo, instrumental (beatless ambient, no vocals)
+
+Filed: demo/music/bed.mp3
+
+Why not Pixabay or Mixkit
+-------------------------
+Pixabay refused automated access from this environment:
+  GET https://pixabay.com/music/search/ambient%20tech/  -> 403
+  GET https://cdn.pixabay.com/                             -> 403
+Mixkit's pages load their catalogue through JavaScript. The tag page exposes five
+preview URLs (assets.mixkit.co/music/<id>/<id>.mp3) but no track titles, artists or
+licence metadata anywhere in the served HTML, and the per-track pages 404 on the
+obvious URL shapes. A track whose licence and title cannot be cited fails the rule
+"do not use a track whose license you cannot cite".
+
+The Openverse API was used instead: it returns title, creator, licence and the
+canonical source URL for each result, so the licence above is verifiable.
+
+Attribution
+-----------
+CC BY 3.0 requires credit. Use this line wherever the video is published:
+
+  Music: "Plathe (Beatless Ambient Mix)" by POA — CC BY 3.0
+  https://www.jamendo.com/track/596719
+
+The bed is mixed at ~-15 dB under the narration and sidechain-ducked, so it is
+background only.

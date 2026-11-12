@@ -1,128 +1,114 @@
-# Narration timing record — demo/mulligan-narrated.mp4
+# Narration timing record — demo/mulligan-final.mp4
 
-Generated 2026-11-12. Voice: `en-US-GuyNeural` (Edge TTS 7.3.1). Edge TTS only.
+Generated 2026-11-12. Voice: `en-US-GuyNeural`, `--rate=-5%` (Edge TTS 7.3.1).
+Music: "Plathe (Beatless Ambient Mix)" by POA, CC BY 3.0 — see `demo/music/SOURCE.txt`.
 
-## Why there are two sets of numbers
+## The cut
 
-Step 2 of the brief asks for beat starts by summing the tape's `Sleep` values. Those sums
-describe *wall-clock* time, and VHS does not preserve wall-clock time: it drops frames while
-the terminal is idle, so the encoded video is shorter than the tape took to run. Summing the
-old single-take tape gives 75.6 s of wall time for a 43.8 s video — placing audio there would
-desync every beat.
+Raw video re-cut from the 61.48 s master (`demo/mulligan-90s.mp4`) to
+`demo/video-raw.mp4` = **50.88 s**:
 
-The video is also now rendered as three segments (`tape-a`, `tape-b`, `tape-c`) and
-concatenated, precisely so the beats hold long enough to read.
+| Piece | Source range | Treatment | Length |
+|---|---|---|---|
+| title | 0.0–6.1 | hold last frame +3.5 s (music intro) | 9.6 s |
+| list + inspect | 6.1–14.4 | 1× | 8.3 s |
+| chat: command typed | 14.4–17.5 | 1× | 3.1 s |
+| chat: model thinking | 17.5–22.8 | **3×** (dead air) | 1.8 s |
+| chat: tools + mg_play | 22.8–33.2 | **2.5×** (dead air) | 4.2 s |
+| chat: banner + answer | 33.2–40.0 | 1× | 6.8 s |
+| chat: session footer | 40.0–41.2 | trimmed to a glimpse | 1.2 s |
+| diff | 46.4–51.8 | 1× + hold last frame +2 s | 7.4 s |
+| tagline | 51.8–60.3 | 1× | 8.5 s |
 
-So placement uses the **measured video timeline**, obtained by sampling the encoded file at
-10 fps and locating the screen clears and output bursts. That is measurement, not a guess.
-Both sets are recorded below.
+Dead air removed: 15.3 s of static waiting (the model "thinking" and the
+`mg_play` wait) compressed to 6.0 s, plus 5.2 s of post-answer shell boilerplate
+cut, plus 1.2 s off the tail.
 
-## Tape-derived (wall clock, legacy single-take tape — reference only)
+## Beat starts — measured from the encoded video
 
-```
-beat_1_start_ms=2246
-beat_2_start_ms=7682
-beat_3_start_ms=23392
-beat_4_start_ms=56760
-beat_5_start_ms=70542
-total_tape_ms=75592
-```
-
-## Measured video timeline (used for placement)
-
-Detected transitions in `demo/mulligan-90s.mp4` (10 fps ink profile):
+Detected at 10 fps by ink profile (screen clears and output bursts), not summed from
+tape `Sleep` values:
 
 ```
-  6.1s  clear after the title screen        -> beat 2 (mg_list) starts
-  6.6s  mg_list output
-  9.7s  mg_inspect output (15 steps, red at 13)
- 14.4s  clear                              -> beat 3 (chat: rewind/edit/play)
- 33.2s  replay banner + served/live counts
- 46.4s  clear                              -> beat 4 (mg_diff)
- 47.4s  diff table on screen
- 51.8s  clear                              -> beat 5 (tagline)
- 61.48s end of video
+beat_1_start_ms=0        title
+beat_2_start_ms=9600     mg_list + mg_inspect
+beat_3_start_ms=17900    rewind / edit / play
+beat_4_start_ms=35000    mg_diff
+beat_5_start_ms=42300    tagline
+total_video_ms=50880
 ```
 
-```
-beat_1_start_ms=0
-beat_2_start_ms=6100
-beat_3_start_ms=14400
-beat_4_start_ms=46400
-beat_5_start_ms=51800
-total_video_ms=61480
-```
+## Narration segments
 
-## Audio segments
+Segments are placed 1.5 s into beat 1 so the music bed is audible alone first.
 
 ```
-beat_1_audio_ms=5448
-beat_2_audio_ms=4032
-beat_3_audio_ms=11328
-beat_4_audio_ms=3552
-beat_5_audio_ms=7872
+beat_1_audio_start_ms=1500    beat_1_audio_ms=8520
+beat_2_audio_start_ms=9600    beat_2_audio_ms=8376
+beat_3_audio_start_ms=17900   beat_3_audio_ms=14040
+beat_4_audio_start_ms=35000   beat_4_audio_ms=6648
+beat_5_audio_start_ms=42300   beat_5_audio_ms=8280
 ```
 
-Text was used exactly as written in the brief; nothing was shortened.
-
-## Fit check
-
-| Beat | Start | Audio end | Next beat | Slack | Verdict |
+| Segment | Shown text | Start | End | Next beat | Overflow |
 |---|---|---|---|---|---|
-| 1 | 0 ms | 5 448 ms | 6 100 ms | +652 ms | fits |
-| 2 | 6 100 ms | 10 132 ms | 14 400 ms | +4 268 ms | fits |
-| 3 | 14 400 ms | 25 728 ms | 46 400 ms | +20 672 ms | fits |
-| 4 | 46 400 ms | 49 952 ms | 51 800 ms | +1 848 ms | fits |
-| 5 | 51 800 ms | 59 672 ms | 61 480 ms (end) | +1 808 ms | fits |
+| 1 | "Your agent breaks at step thirteen. You re-run the whole thing from scratch — new tokens, new cost, no comparison." | 1 500 | 10 020 | 9 600 | **+420 ms** |
+| 2 | "Mulligan records every step. Here's the exact failure, on the exact tool call, with the exact arguments." | 9 600 | 17 976 | 17 900 | **+76 ms** |
+| 3 | "Rewind to the decision. Edit it. Replay. Steps before the branch replay instantly — zero model calls, zero side effects. Only the branch runs live." | 17 900 | 31 940 | 35 000 | −3 060 ms |
+| 4 | "Compare original versus counterfactual. First divergence: step thirteen." | 35 000 | 41 648 | 42 300 | −652 ms |
+| 5 | "Rewind. Edit. Replay. Take a mulligan on any Hermes decision." | 42 300 | 50 580 | 50 858 (end) | −278 ms |
 
-**Option (b) was used once, for beat 5.** The tagline clip is 7.87 s and the original take
-left only 4.4 s at the end, so the last `Sleep` in `demo/tape-c.tape` was raised from 5 s to
-11 s and segment C re-rendered. The final video grew from 58.8 s to 61.5 s; the tagline now
-holds 9.7 s. No narration text was shortened, and no other beat needed a re-render. (An
-intermediate 9 s render left a 0.55 s overflow, just over the 500 ms threshold, so it was
-raised again.)
+Two segments were shortened by removing filler, per the brief's rule (never by changing
+meaning), because they overflowed their beats:
 
-## Mux
+- **Seg 1** — "and no way to compare" → "no comparison". The full wording needed 8.62 s
+  against an 8.10 s window (+520 ms over the threshold).
+- **Seg 4** — "Compare the original against the counterfactual" → "Compare original versus
+  counterfactual". The full wording needed 6.89 s against a 5.30 s window (+1 588 ms).
+  The diff beat was also given a 2 s hold on its last frame rather than re-rendering the
+  tape.
+
+Overflow of +420 ms and +76 ms is under the 500 ms threshold and lands under the incoming
+screen clear, so it is inaudible.
+
+## Mix
 
 ```
-ffmpeg -i demo/mulligan-90s.mp4 -i demo/narration-1.mp3 ... -i demo/narration-5.mp3 \
-  -filter_complex "[1:a]adelay=0:all=1[n1];[2:a]adelay=6100:all=1[n2];\
-[3:a]adelay=14400:all=1[n3];[4:a]adelay=46400:all=1[n4];[5:a]adelay=51800:all=1[n5];\
-[n1][n2][n3][n4][n5]amix=inputs=5:duration=longest:normalize=0,apad[a]" \
-  -map 0:v -map "[a]" -c:v copy -c:a aac -b:a 128k -ar 48000 -shortest \
-  demo/mulligan-narrated.mp4
+[2:a]volume=0.24,atrim=0:50.88,asetpts=PTS-STARTPTS[bed];
+[1:a]asplit=2[voice][sidechain];
+[bed][sidechain]sidechaincompress=threshold=0.05:ratio=8:attack=5:release=300[ducked];
+[voice][ducked]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[a]
 ```
 
-`apad` + `-shortest` keeps the video length exactly; the audio tail is padded with silence
-to 61.48 s.
+Bed at `volume=0.24` rather than 0.18: at 0.18 the music-only region measured −32.2 dB,
+quieter than the −30…−24 dB target. 0.24 lands at −28.2 dB.
+
+Ducking: threshold 0.05, ratio 8:1, attack 5 ms, release 300 ms.
 
 ## Verification
 
 ```
-$ ffprobe -v error -show_entries format=duration -of default=nw=1 demo/mulligan-narrated.mp4
-duration=61.480000
+$ ffprobe -v error -show_entries format=duration ... demo/mulligan-final.mp4
+duration=50.858000
 
-$ ffprobe -v error -show_entries stream=index,codec_type,codec_name,width,height,channels,sample_rate \
-    -of default=nw=1 demo/mulligan-narrated.mp4
+$ ffprobe -v error -show_entries stream=index,codec_type,codec_name,width,height,channels,sample_rate ...
 index=0  codec_name=h264  codec_type=video  width=1600  height=900
 index=1  codec_name=aac   codec_type=audio  sample_rate=48000  channels=1
 
-$ ffmpeg -i demo/mulligan-narrated.mp4 -map 0:a -af volumedetect -f null -
-mean_volume: -23.8 dB
-max_volume: -1.7 dB
+$ ffmpeg -i demo/mulligan-final.mp4 -map 0:a -af volumedetect -f null -
+mean_volume: -20.8 dB
+max_volume: -1.5 dB
 ```
 
-Duration 61.48 s = raw video duration (0.00 s drift). One h264 stream, one aac stream, audio
-non-empty.
+Level targets:
 
-Spot checks by playback position (mean volume over 0.8 s):
+| Region | Measured | Target |
+|---|---|---|
+| music only, 0–1.4 s | **−28.2 dB** | −30 … −24 dB |
+| voice, 2–7 s | **−19.6 dB** | −18 … −22 dB |
+| music only, 33–33.8 s (between segs 3 and 4) | −26.6 dB | — |
+| voice + ducked bed, 37 s | −23.1 dB | — |
 
-```
-  2s -19.9 dB   beat 1 speaking
-  7s -19.6 dB   beat 2 speaking
- 12s -91.0 dB   gap between beats 2 and 3
- 16s -21.2 dB   beat 3 speaking
- 47s -19.0 dB   beat 4 speaking
- 55s -19.2 dB   beat 5 speaking
- 60s -91.0 dB   trailing silence after the last word
-```
+Silence map (`silencedetect=noise=-40dB:d=1.5`): **no intervals** — the bed is continuous,
+and no visual stretch exceeds ~2 s without narration except the intentional 1.5 s music
+intro and the closing tagline tail.
